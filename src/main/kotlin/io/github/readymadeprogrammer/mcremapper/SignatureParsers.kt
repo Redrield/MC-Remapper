@@ -14,6 +14,10 @@ fun parseClassMapping(raw: String): Mapping<ClassInfo> {
     return Mapping(ClassInfo(matcher.group(1)), matcher.group(2))
 }
 
+fun parseTsrgFieldMapping(raw: List<String>): Mapping<FieldInfo> {
+    return Mapping(FieldInfo(TypeDescriptor(""), raw[0]), raw[1])
+}
+
 fun parseFieldMapping(raw: String): Mapping<FieldInfo> {
     val matcher = fieldRegex.matcher(raw)
     matcher.find()
@@ -41,6 +45,32 @@ fun parseType(raw: String): TypeDescriptor {
     })
 }
 
+fun parseTsrgMethodMapping(raw: List<String>): Mapping<MethodInfo> {
+    val name = raw[0]
+    val sig = raw[1].substring(1)
+    val mapping = raw[2]
+
+    val paramDescriptors = mutableListOf<TypeDescriptor>()
+    var retDescriptor: TypeDescriptor? = null
+
+    var inParams = true
+    val iter = sig.iterator()
+
+    while(iter.hasNext()) {
+        val next = parseNext(iter)
+        if(next == "X") {
+            inParams = false
+        }
+
+        if(inParams) {
+            paramDescriptors += TypeDescriptor(next)
+        }else {
+            retDescriptor = TypeDescriptor(next)
+        }
+    }
+
+    return Mapping(MethodInfo(retDescriptor!!, paramDescriptors, name), mapping)
+}
 
 fun parseMethodMapping(raw: String): Mapping<MethodInfo> {
     if (raw[0].isDigit()) {
@@ -72,7 +102,7 @@ fun parseMethodMapping(raw: String): Mapping<MethodInfo> {
 
 private fun parseNext(iterator: Iterator<Char>): String {
     return when (val char = iterator.next()) {
-        'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z' -> char.toString()
+        'V', 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z' -> char.toString()
         '[' -> char + parseNext(iterator)
         'L' -> {
             val builder = StringBuilder("L")
@@ -84,7 +114,8 @@ private fun parseNext(iterator: Iterator<Char>): String {
             builder.append(content)
             builder.toString()
         }
-        else -> error("")
+        ')' -> "X"
+        else -> error("$char")
     }
 }
 

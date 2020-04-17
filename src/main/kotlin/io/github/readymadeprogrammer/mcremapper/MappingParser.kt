@@ -1,6 +1,43 @@
 package io.github.readymadeprogrammer.mcremapper
 
+import java.io.File
 import java.net.URL
+
+fun parseTsrgMapping(file: File): Set<ClassMapping> {
+    val mappings = HashSet<ClassMapping>()
+    var type: Mapping<ClassInfo>? = null
+    var field: MutableSet<Mapping<FieldInfo>>? = null
+    var method: MutableSet<Mapping<MethodInfo>>? = null
+
+    val contents = file.readLines()
+
+    for(mappingLine in contents) {
+        if(!mappingLine.startsWith("\t")) {
+            if(type != null) {
+                val lastMapping = ClassMapping(
+                        type,
+                        field!!,
+                        method!!
+                )
+                mappings += lastMapping
+            }
+
+            val map = mappingLine.trim().split(" ")
+            type = Mapping(ClassInfo(map[0]), map[1])
+            field = HashSet()
+            method = HashSet()
+        } else {
+            val map = mappingLine.trim().split(" ")
+            if(map.size == 3) {
+                method!! += parseTsrgMethodMapping(map)
+            } else if(map.size == 2) {
+                field!! += parseTsrgFieldMapping(map)
+            }
+        }
+    }
+
+    return mappings
+}
 
 fun parseMapping(url: URL): Set<ClassMapping> {
     val mappings = HashSet<ClassMapping>()
